@@ -16,13 +16,15 @@
 
 package com.liferay.blade.samples.hook.resourcebundle;
 
-import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.AggregateResourceBundleLoader;
+import com.liferay.portal.kernel.util.CacheResourceBundleLoader;
+import com.liferay.portal.kernel.util.ClassResourceBundleLoader;
 import com.liferay.portal.kernel.util.ResourceBundleLoader;
-import com.liferay.portal.kernel.util.ResourceBundleUtil;
 
 import java.util.ResourceBundle;
 
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 /**
  * @author Carlos Sierra Andrés
@@ -31,6 +33,7 @@ import org.osgi.service.component.annotations.Component;
 	immediate = true,
 	property = {
 		"bundle.symbolic.name=com.liferay.blogs.web",
+		"resource.bundle.base.name=content.Language",
 		"servlet.context.name=blogs-web"
 	}
 )
@@ -38,13 +41,21 @@ public class ResourceBundleLoaderComponent implements ResourceBundleLoader {
 
 	@Override
 	public ResourceBundle loadResourceBundle(String languageId) {
-		Class<?> clazz = getClass();
-
-		ClassLoader classLoader = clazz.getClassLoader();
-
-		return ResourceBundleUtil.getBundle(
-			"content.Language", LocaleUtil.fromLanguageId(languageId),
-			classLoader);
+		return _resourceBundleLoader.loadResourceBundle(languageId);
 	}
+
+	@Reference(target = "(bundle.symbolic.name=com.liferay.blogs.web)")
+	public void setResourceBundleLoader(
+		ResourceBundleLoader resourceBundleLoader) {
+
+		_resourceBundleLoader = new AggregateResourceBundleLoader(
+			new CacheResourceBundleLoader(
+				new ClassResourceBundleLoader(
+					"content.Language",
+					ResourceBundleLoaderComponent.class.getClassLoader())),
+			resourceBundleLoader);
+	}
+
+	private AggregateResourceBundleLoader _resourceBundleLoader;
 
 }
